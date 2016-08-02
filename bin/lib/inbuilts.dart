@@ -1,102 +1,102 @@
 library inbuilts;
 
-import "dart:io";
+// import "dart:io";
 import "dart:collection";
 import "dart:math";
 import "sprintf.dart";
 
-class $PyFile {
-    File handle;
-    bool closed, softspace;
-    String mode, name;
+// class $PyFile {
+//     File handle;
+//     bool closed, softspace;
+//     String mode, name;
 
-    $PyFile(name, [mode = 'r']) {
-        this.closed = false;
-        this.name = name.toString();
-        this.mode = mode.toString();
-        this.softspace = true;
+//     $PyFile(name, [mode = 'r']) {
+//         this.closed = false;
+//         this.name = name.toString();
+//         this.mode = mode.toString();
+//         this.softspace = true;
 
-        switch (this.mode) {
-            case "r":
-                handle = new File(name).openSync(mode: FileMode.READ);
-                break;
-            case "w":
-                handle = new File(name).openSync(mode: FileMode.WRITE);
-                break;
-        }
-    }
+//         switch (this.mode) {
+//             case "r":
+//                 handle = new File(name).openSync(mode: FileMode.READ);
+//                 break;
+//             case "w":
+//                 handle = new File(name).openSync(mode: FileMode.WRITE);
+//                 break;
+//         }
+//     }
 
-    $enter() {
-        return this;
-    }
+//     $enter() {
+//         return this;
+//     }
 
-    $exit() {
-        this.close();
-    }
+//     $exit() {
+//         this.close();
+//     }
 
-    read([bytes]) {
-        if (bytes == null)
-            bytes = handle.lengthSync();
-        else
-            bytes = bytes.value;
+//     read([bytes]) {
+//         if (bytes == null)
+//             bytes = handle.lengthSync();
+//         else
+//             bytes = bytes.value;
 
-        return new $PyString(new String.fromCharCodes(handle.readSync(bytes)));
-    }
+//         return new $PyString(new String.fromCharCodes(handle.readSync(bytes)));
+//     }
 
-    readline() {
-        stderr.writeln("readline() unimplemented till now. Sorry. Exiting...");
-        exit(1);
-    }
+//     readline() {
+//         stderr.writeln("readline() unimplemented till now. Sorry. Exiting...");
+//         exit(1);
+//     }
 
-    readlines() => new $PyList(new File(name).readAsLinesSync());
-    write(data) => handle.writeStringSync(data.toString());
-    tell() => handle.positionSync();
+//     readlines() => new $PyList(new File(name).readAsLinesSync());
+//     write(data) => handle.writeStringSync(data.toString());
+//     tell() => handle.positionSync();
 
-    writelines(lines) {
-        for (int i = 0; i < lines.length; i++)
-            handle.writeStringSync(lines[i] + "\n");
-    }
+//     writelines(lines) {
+//         for (int i = 0; i < lines.length; i++)
+//             handle.writeStringSync(lines[i] + "\n");
+//     }
 
-    seek(position, [whence]) {
-        if (whence == null)
-            whence = 0;
-        else
-            whence = whence.value;
-        position = position.value;
+//     seek(position, [whence]) {
+//         if (whence == null)
+//             whence = 0;
+//         else
+//             whence = whence.value;
+//         position = position.value;
 
-        switch(whence) {
-            case 0:
-                handle.setPositionSync(position);
-                break;
+//         switch(whence) {
+//             case 0:
+//                 handle.setPositionSync(position);
+//                 break;
 
-            case 1:
-                handle.setPositionSync(handle.positionSync() + position);
-                break;
+//             case 1:
+//                 handle.setPositionSync(handle.positionSync() + position);
+//                 break;
 
-            case 2:
-                handle.setPositionSync(handle.lengthSync() + position);
-                break;
-        }
-    }
+//             case 2:
+//                 handle.setPositionSync(handle.lengthSync() + position);
+//                 break;
+//         }
+//     }
 
-    close() {
-        closed = true;
-        handle.closeSync();
-    }
-}
+//     close() {
+//         closed = true;
+//         handle.closeSync();
+//     }
+// }
 
-open(name, [mode = 'r']) {
-    name = name.toString();
+// open(name, [mode = 'r']) {
+//     name = name.toString();
 
-    if ((mode == "r" || mode == "rb") && !new File(name).existsSync())
-        throw new FileSystemException();
+//     if ((mode == "r" || mode == "rb") && !new File(name).existsSync())
+//         throw new FileSystemException();
 
-    return new $PyFile(name, mode);
-}
+//     return new $PyFile(name, mode);
+// }
 
-file(path, [mode = 'r']) {
-    return open(path, mode);
-}
+// file(path, [mode = 'r']) {
+//     return open(path, mode);
+// }
 
 class $PyNone {
     static final $PyNone _inst = new $PyNone._internal();
@@ -229,12 +229,13 @@ $PyNum $n([x]) {
     return new $PyNum(x);
 }
 
-$PyNum int([x]) {
+$PyNum $PyInt([x]) {
     if (x == null)
         x = 0;
     else if (x is $PyString)
         x = num.parse(x.value);
-    return new $PyNum(x);
+
+    return new $PyNum(x.value.floor());
 }
 
 $PyNum float([x]) {
@@ -1386,6 +1387,54 @@ class $RangeIterator implements Iterator<int> {
     }
 }
 
+// $getType(variable) {
+//     if (variable is $PyNone)
+//         return 0;
+//     else if (variable is $PyBool)
+//         return 1;
+//     else if (variable is $PyDict)
+//         return 2;
+//     else if (variable is $PyList)
+//         return 3;
+//     else if (variable is List)
+//         return 4;
+//     else if (variable is $PyNum)
+//         return 5;
+//     else if (variable is num)
+//         return 6;
+//     else if (variable is $PyString || variable is String)
+//         return 7;
+//     else if (variable is $PyTuple)
+//         return 8;
+//     else
+//         return -1;
+// }
+
+
+class $PyBytes {
+    List<num> _bytes;
+    $PyBytes(source, [encoding='']) {
+        print("Creating a bytes object");
+        var sType = $getType(source);
+        if([3, 4, 8].contains($getType(source))) {
+            _bytes = list(source).toList();
+            for (num el in _bytes) {
+                if (el < 0 || el > 245) {
+                    print("TypeError");
+                }
+            }
+        } else if (sType == 7) {
+            if(!encoding) {
+                print("No encoding specified.");
+            }
+        }
+    }
+    String toString() => _bytes.toString();
+}
+
+bytes(iterable) {
+    return new $PyBytes(iterable);
+}
 range(start_inclusive, [stop_exclusive, step]) => new $Range(start_inclusive, stop_exclusive, step).toList();
 xrange(start_inclusive, [stop_exclusive, step]) => new $Range(start_inclusive, stop_exclusive, step);
 indices(lengthable) => new $Range(0, lengthable.length);

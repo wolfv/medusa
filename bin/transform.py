@@ -1,6 +1,10 @@
 import ast, _ast, sys, os
 
-inc_path = "".join(["file:///", os.path.expanduser("~").replace("\\", "/"), "/.medusa/lib/"])
+import os
+print 
+
+
+inc_path = "".join(["file:///", os.path.dirname(os.path.realpath(__file__)).replace("\\", "/"), "/lib/"])
 
 dartImports = []
 dartLocalVars = []
@@ -14,6 +18,8 @@ pyInbuilts = ['abs',
             'all',
             'any',
             'bin',
+            'bytes',
+            'print',
             'dict',
             'file',
             'float',
@@ -58,6 +64,7 @@ isGenerator = False
 imports = {}
 imports['random'] = [inc_path + "pyrandom.dart", "$PyRandom"]
 imports['time'] = [inc_path + "pytime.dart", "$PyTime"]
+imports['math'] = [inc_path + "pymath.dart", "$PyMath"]
 
 # exceptions is the dictionary that maps to Dart expressions
 exceptions = {}
@@ -572,8 +579,8 @@ class PyParser(ast.NodeVisitor):
             i += 1
         code += "]" if (fname in variableArgs or formats) else ""
 
-        if stmt_call.starargs != None:
-            code += "," + self.visit(stmt_call.starargs)
+        # if stmt_call.starargs != None:
+        #     code += "," + self.visit(stmt_call.starargs)
 
         for node in stmt_call.keywords:
             arg = node.arg
@@ -587,7 +594,8 @@ class PyParser(ast.NodeVisitor):
 
     def visit_Compare(self, stmt_test):
         '''
-        Comapring the left and right operands calls the visit_compare.
+        Comparing the left and right operands calls the visit_compare.
+        @TODO multiple comparisons on one line
         '''
         global wrap
 
@@ -662,16 +670,19 @@ class PyParser(ast.NodeVisitor):
 
         if len(stmt_if.orelse) > 0:
             code += "else "
-            if len(stmt_if.orelse) == 1 and isinstance(stmt_if.orelse[0], _ast.If):
-                code += self.visit(stmt_if.orelse[0])
-            else:
-                code += "{"
-                for node in stmt_if.orelse:
-                    code += self.visit(node)
-                code += "}"
+            code += "{"
+            for node in stmt_if.orelse:
+                t = self.visit(node)
+                if t:
+                    code += t
+
+            code += "}"
 
         fromTest = False
         return code
+
+    def visit_Assert(self, node):
+        return 'assert(' + self.visit(node.test) + ');'
 
     def visit_Import(self, stmt_import):
         global parsedType, imports, parsedClasses, parsedFunctions, parsedCode, importing, userImports
@@ -792,8 +803,8 @@ class PyParser(ast.NodeVisitor):
         body, code, defines, arguments = "", "", "", []
 
         for arg in stmt_function.args.args:
-            arguments.append(arg.id)
-            if arg.id == "self":
+            arguments.append(arg.arg)
+            if arg.arg == "self":
                 stmt_function.args.args.remove(arg)
                 break
 
@@ -834,7 +845,7 @@ class PyParser(ast.NodeVisitor):
         b = False
         fixers = ""
         while i < alen:
-            var = stmt_function.args.args[i].id
+            var = stmt_function.args.args[i].arg
 
             if dIndex > -1 and i >= dIndex:
                 if not b:
@@ -844,7 +855,7 @@ class PyParser(ast.NodeVisitor):
                 j += 1
 
             code += var
-            dartLocalVars.append(stmt_function.args.args[i].id)
+            dartLocalVars.append(stmt_function.args.args[i].arg)
             if (i + 1) < alen:
                 code += ","
             i += 1
@@ -869,6 +880,7 @@ class PyParser(ast.NodeVisitor):
         return code
 
     def visit_Print(self, stmt_print):
+        print("VISITING PRINT ... ", self)
         self.addImport("dart:io")
 
         code = ""
@@ -892,13 +904,15 @@ class PyParser(ast.NodeVisitor):
 
         return code
 
+    def visit_Bytes(self, bytes_obj):
+        return "new $PyBytes([" + ', '.join([str(el) for el in bytes(bytes_obj.s)]) + ']);'
+
     def visit_Assign(self, stmt_assign):
         global dartLocalVars, funMode, pyGlobalVars, classyMode
 
         code = ""
         index = 0
         multi = False
-
         if isinstance(stmt_assign.targets[0], _ast.Tuple):
             targets = stmt_assign.targets[0].elts
 
@@ -1002,7 +1016,10 @@ class PyParser(ast.NodeVisitor):
         return code
 
     def visit_Raise(self, stmt_raise):
-        return "throw " + self.visit(stmt_raise.type) + ";"
+        # print(stmt_raise.__dict__)
+        return "/* nothing raised */"
+        # return "throw " + self.visit(stmt_raise.exc) + ";"
+
 
     def visit_TryExcept(self, stmt_tryexcept, final = False):
         global dartLocalVars
@@ -1105,7 +1122,7 @@ if len(parsedImports):
 if len(dartGlobalVars):
     stitched += "var " + ",".join(dartGlobalVars) + ";"
 for parsedClass in parsedClasses:
-    stitched += parsedClass
+    stitched += parsedClass + '\n'
 for func in fCalled:
     stitched += parsedFunctions[fNames.index(func)]
 del fCalled[:]
@@ -1114,5 +1131,7 @@ stitched += "main(){"
 for code in parsedCode:
     stitched += code
 stitched += "}"
+
+stitched = stitched.replace(';', ';\n')
 
 sys.stdout.write(stitched)
